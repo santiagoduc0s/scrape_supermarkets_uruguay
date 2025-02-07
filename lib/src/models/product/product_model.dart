@@ -19,10 +19,14 @@ class Product with _$Product {
     required double price,
 
     /// The product's image URL.
-    required String? imageUrl,
+    required List<String> imageUrl,
+
+    /// The product's link.
+    required String? link,
   }) = _Product;
 
-  factory Product.fromJson(Map<String, Object?> json) => _$ProductFromJson(json);
+  factory Product.fromJson(Map<String, Object?> json) =>
+      _$ProductFromJson(json);
 
   const Product._();
 
@@ -31,7 +35,8 @@ class Product with _$Product {
     String name = '',
     String? brand,
     double price = 0.0,
-    String? imageUrl,
+    List<String> imageUrl = const [],
+    String? link,
   }) {
     return Product(
       id: id,
@@ -39,6 +44,7 @@ class Product with _$Product {
       brand: brand,
       price: price,
       imageUrl: imageUrl,
+      link: link,
     );
   }
 }

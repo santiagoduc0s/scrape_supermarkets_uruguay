@@ -33,7 +33,10 @@ mixin _$Product {
   double get price => throw _privateConstructorUsedError;
 
   /// The product's image URL.
-  String? get imageUrl => throw _privateConstructorUsedError;
+  List<String> get imageUrl => throw _privateConstructorUsedError;
+
+  /// The product's link.
+  String? get link => throw _privateConstructorUsedError;
 
   /// Serializes this Product to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,7 +53,12 @@ abstract class $ProductCopyWith<$Res> {
       _$ProductCopyWithImpl<$Res, Product>;
   @useResult
   $Res call(
-      {String id, String name, String? brand, double price, String? imageUrl});
+      {String id,
+      String name,
+      String? brand,
+      double price,
+      List<String> imageUrl,
+      String? link});
 }
 
 /// @nodoc
@@ -72,7 +80,8 @@ class _$ProductCopyWithImpl<$Res, $Val extends Product>
     Object? name = null,
     Object? brand = freezed,
     Object? price = null,
-    Object? imageUrl = freezed,
+    Object? imageUrl = null,
+    Object? link = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -91,9 +100,13 @@ class _$ProductCopyWithImpl<$Res, $Val extends Product>
           ? _value.price
           : price // ignore: cast_nullable_to_non_nullable
               as double,
-      imageUrl: freezed == imageUrl
+      imageUrl: null == imageUrl
           ? _value.imageUrl
           : imageUrl // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      link: freezed == link
+          ? _value.link
+          : link // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -107,7 +120,12 @@ abstract class _$$ProductImplCopyWith<$Res> implements $ProductCopyWith<$Res> {
   @override
   @useResult
   $Res call(
-      {String id, String name, String? brand, double price, String? imageUrl});
+      {String id,
+      String name,
+      String? brand,
+      double price,
+      List<String> imageUrl,
+      String? link});
 }
 
 /// @nodoc
@@ -127,7 +145,8 @@ class __$$ProductImplCopyWithImpl<$Res>
     Object? name = null,
     Object? brand = freezed,
     Object? price = null,
-    Object? imageUrl = freezed,
+    Object? imageUrl = null,
+    Object? link = freezed,
   }) {
     return _then(_$ProductImpl(
       id: null == id
@@ -146,9 +165,13 @@ class __$$ProductImplCopyWithImpl<$Res>
           ? _value.price
           : price // ignore: cast_nullable_to_non_nullable
               as double,
-      imageUrl: freezed == imageUrl
-          ? _value.imageUrl
+      imageUrl: null == imageUrl
+          ? _value._imageUrl
           : imageUrl // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      link: freezed == link
+          ? _value.link
+          : link // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -162,8 +185,10 @@ class _$ProductImpl extends _Product {
       required this.name,
       required this.brand,
       required this.price,
-      required this.imageUrl})
-      : super._();
+      required final List<String> imageUrl,
+      required this.link})
+      : _imageUrl = imageUrl,
+        super._();
 
   factory _$ProductImpl.fromJson(Map<String, dynamic> json) =>
       _$$ProductImplFromJson(json);
@@ -185,12 +210,23 @@ class _$ProductImpl extends _Product {
   final double price;
 
   /// The product's image URL.
+  final List<String> _imageUrl;
+
+  /// The product's image URL.
   @override
-  final String? imageUrl;
+  List<String> get imageUrl {
+    if (_imageUrl is EqualUnmodifiableListView) return _imageUrl;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_imageUrl);
+  }
+
+  /// The product's link.
+  @override
+  final String? link;
 
   @override
   String toString() {
-    return 'Product(id: $id, name: $name, brand: $brand, price: $price, imageUrl: $imageUrl)';
+    return 'Product(id: $id, name: $name, brand: $brand, price: $price, imageUrl: $imageUrl, link: $link)';
   }
 
   @override
@@ -202,14 +238,14 @@ class _$ProductImpl extends _Product {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.brand, brand) || other.brand == brand) &&
             (identical(other.price, price) || other.price == price) &&
-            (identical(other.imageUrl, imageUrl) ||
-                other.imageUrl == imageUrl));
+            const DeepCollectionEquality().equals(other._imageUrl, _imageUrl) &&
+            (identical(other.link, link) || other.link == link));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, name, brand, price, imageUrl);
+  int get hashCode => Object.hash(runtimeType, id, name, brand, price,
+      const DeepCollectionEquality().hash(_imageUrl), link);
 
   /// Create a copy of Product
   /// with the given fields replaced by the non-null parameter values.
@@ -233,7 +269,8 @@ abstract class _Product extends Product {
       required final String name,
       required final String? brand,
       required final double price,
-      required final String? imageUrl}) = _$ProductImpl;
+      required final List<String> imageUrl,
+      required final String? link}) = _$ProductImpl;
   const _Product._() : super._();
 
   factory _Product.fromJson(Map<String, dynamic> json) = _$ProductImpl.fromJson;
@@ -256,7 +293,11 @@ abstract class _Product extends Product {
 
   /// The product's image URL.
   @override
-  String? get imageUrl;
+  List<String> get imageUrl;
+
+  /// The product's link.
+  @override
+  String? get link;
 
   /// Create a copy of Product
   /// with the given fields replaced by the non-null parameter values.

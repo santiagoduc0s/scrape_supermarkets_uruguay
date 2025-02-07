@@ -1,6 +1,11 @@
 export 'device.dart';
 export 'device_info.dart';
+export 'devoto.dart';
+export 'disco.dart';
 export 'notification.dart';
 export 'product/product.dart';
+export 'supermarket.dart';
+export 'tata.dart';
+export 'tienda_inglesa.dart';
 export 'user/user.dart';
 export 'user_credential.dart';

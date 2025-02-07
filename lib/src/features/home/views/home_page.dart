@@ -8,191 +8,51 @@ import 'package:http/http.dart' as http;
 import 'package:scrape_supermarkets_uruguay/l10n/l10n.dart';
 import 'package:scrape_supermarkets_uruguay/src/features/notifications/views/views.dart';
 import 'package:scrape_supermarkets_uruguay/src/mappers/mappers.dart';
+import 'package:scrape_supermarkets_uruguay/src/models/models.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  Future<void> fetchProductsTata() async {
-    final url = Uri.parse('https://www.tata.com.uy/api/graphql');
+  @override
+  _HomePageState createState() => _HomePageState();
+}
 
-    final headers = {
-      'Content-Type': 'application/json',
-    };
+class _HomePageState extends State<HomePage> {
+  final TextEditingController _controller = TextEditingController();
+  List<Product> _products = [];
+  bool _isLoading = false;
 
-    const montevideo = 'U1cjdGF0YXV5bW9udGV2aWRlbw==';
+  Future<void> _searchProducts() async {
+    setState(() => _isLoading = true);
 
-    final requestBody = {
-      'operationName': 'SearchSuggestionsQuery',
-      'variables': {
-        'term': 'arroz saman',
-        'selectedFacets': [
-          {
-            'key': 'channel',
-            'value': jsonEncode(
-              {
-                'salesChannel': '4',
-                'regionId': montevideo,
-              },
-            ),
-          },
-          {
-            'key': 'locale',
-            'value': 'es-UY',
-          }
-        ],
-      },
-    };
-
-    try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: jsonEncode(requestBody),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception(response.body);
-      }
-
-      final dataRaw = jsonDecode(response.body);
-      final data = dataRaw['data'];
-      final search = data['search'];
-      final suggestions = search['suggestions'];
-      final productsRaw = suggestions['products'];
-
-      final products = productsRaw
-          .map((product) =>
-              ProductMapper().fromTata(product as Map<String, dynamic>))
-          .toList();
-
-      print('asdf');
-    } catch (e) {
-      debugPrint('$e');
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _isLoading = false);
+      return;
     }
-  }
-
-  Future<void> fetchProductsDisco() async {
-    final searchTerm = 'arroz';
-
-    Map<String, dynamic> variables = {
-      "productOriginVtex": true,
-      "simulationBehavior": "default",
-      "hideUnavailableItems": true,
-      "advertisementOptions": {
-        "showSponsored": true,
-        "sponsoredCount": 2,
-        "repeatSponsoredProducts": false,
-        "advertisementPlacement": "autocomplete"
-      },
-      "fullText": searchTerm,
-      "count": 5,
-      "shippingOptions": [],
-      "variant": null
-    };
-
-    // Encode variables to Base64
-    String encodedVariables = base64.encode(utf8.encode(jsonEncode(variables)));
-
-    final url = Uri.https(
-      'www.disco.com.uy',
-      '/_v/segment/graphql/v1',
-      {
-        'workspace': 'master',
-        'maxAge': 'medium',
-        'appsEtag': 'remove',
-        'domain': 'store',
-        'locale': 'es-UY',
-        'operationName': 'productSuggestions',
-        'variables': '{}',
-        'extensions': jsonEncode({
-          "persistedQuery": {
-            "version": 1,
-            "sha256Hash":
-                "0ef2c56d9518b51f912c2305ac4b07851c265b645dcbece6843c568bb91d39ff",
-            "sender": "vtex.store-resources@0.x",
-            "provider": "vtex.search-graphql@0.x"
-          },
-          "variables": encodedVariables
-        }),
-      },
-    );
-
-    final headers = {
-      'Content-Type': 'application/json',
-    };
 
     try {
-      final response = await http.get(url, headers: headers);
+      final results = await Future.wait([
+        fetchProductsTata(text),
+        fetchProductsDisco(text),
+        fetchProductsTiendaInglesa(text),
+        fetchProductsDevoto(text),
+      ]);
 
-      if (response.statusCode != 200) {
-        throw Exception('Error fetching products: ${response.body}');
-      }
-
-      final dataRaw = jsonDecode(response.body);
-      final productsRaw =
-          dataRaw['data']['productSuggestions']['products'] ?? [];
-
-      final products = productsRaw.map((product) {
-        print(product);
-        return ProductMapper().fromDisco(product as Map<String, dynamic>);
-      }).toList();
-
-      print('asdf');
+      setState(() {
+        _products = results.expand((list) => list).toList();
+      });
     } catch (e) {
       debugPrint('Error: $e');
     }
-  }
 
-  Future<void> scrapeProducts() async {
-    final url =
-        Uri.parse('https://www.tata.com.uy/s/?q=helado+crufi&sort=score_desc');
-
-    final headers = {'User-Agent': 'Mozilla/5.0'};
-
-    final response = await http.get(url, headers: headers);
-
-    if (response.statusCode == 200) {
-      final soup = BeautifulSoup(response.body);
-
-      final products =
-          soup.findAll('article', attrs: {'data-store-product-card': 'true'});
-
-      for (final product in products) {
-        final nameElement =
-            product.find('h3', attrs: {'data-fs-product-card-title': 'true'});
-        final name = nameElement?.text ?? 'Unknown';
-
-        final priceElement =
-            product.find('span', attrs: {'data-store-price': 'true'});
-        final price = priceElement?.text ?? 'Price not found';
-
-        final imageElement =
-            product.find('img', attrs: {'data-fs-image': 'true'});
-        final imageUrl = imageElement?['src'] ?? 'No image';
-
-        final linkElement =
-            product.find('a', attrs: {'data-store-link': 'true'});
-        final productLink =
-            'https://www.tata.com.uy${linkElement?['href'] ?? '#'}';
-
-        debugPrint('--- Product Found ---');
-        debugPrint('Name: $name');
-        debugPrint('Price: $price');
-        debugPrint('Image: $imageUrl');
-        debugPrint('Link: $productLink');
-        debugPrint('----------------------');
-      }
-    } else {
-      debugPrint(
-        'Failed to load the webpage. Status Code: ${response.statusCode}',
-      );
-    }
+    setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
     final buttonsProvider = Theme.of(context).buttonStyles;
 
     return Scaffold(
@@ -207,18 +67,289 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
+            TextField(
+              controller: _controller,
+              decoration: const InputDecoration(
+                labelText: 'Search for a product',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
             FilledButton(
               style: buttonsProvider.primaryFilled,
-              onPressed: fetchProductsDisco,
-              child: const Text('Search'),
+              onPressed: _isLoading ? null : _searchProducts,
+              child: _isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text('Search'),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: _products.length,
+                itemBuilder: (context, index) {
+                  final product = _products[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.all(UISpacing.space2x),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.arrow_right_alt_sharp,
+                          size: UISpacing.space10x),
+                      onPressed: () {
+                        launchUrl(Uri.parse(product.link!));
+                      },
+                    ),
+                    leading: product.imageUrl.isNotEmpty
+                        ? SizedBox(
+                            width: UISpacing.space15x,
+                            height: UISpacing.space15x,
+                            child: Image.network(product.imageUrl.first),
+                          )
+                        : const Icon(Icons.image),
+                    title: Text(product.name),
+                    subtitle: Text('\$ ${product.price}'),
+                  );
+                },
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+Future<List<Product>> fetchProductsTata(String text) async {
+  final url = Uri.parse('${Tata().domain}/api/graphql');
+
+  final headers = {
+    'Content-Type': 'application/json',
+  };
+
+  const montevideo = 'U1cjdGF0YXV5bW9udGV2aWRlbw==';
+
+  final requestBody = {
+    'operationName': 'SearchSuggestionsQuery',
+    'variables': {
+      'term': text,
+      'selectedFacets': [
+        {
+          'key': 'channel',
+          'value': jsonEncode(
+            {
+              'salesChannel': '4',
+              'regionId': montevideo,
+            },
+          ),
+        },
+        {
+          'key': 'locale',
+          'value': 'es-UY',
+        }
+      ],
+    },
+  };
+
+  final response = await http.post(
+    url,
+    headers: headers,
+    body: jsonEncode(requestBody),
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception(response.body);
+  }
+
+  final dataRaw = jsonDecode(response.body) as Map<String, dynamic>;
+  final data = dataRaw['data'] as Map<String, dynamic>;
+  final search = data['search'] as Map<String, dynamic>;
+  final suggestions = search['suggestions'] as Map<String, dynamic>;
+  final productsRaw = suggestions['products'] as List<dynamic>;
+
+  final productsMap =
+      productsRaw.map((e) => e as Map<String, dynamic>).toList();
+
+  final products =
+      productsMap.map((product) => ProductMapper().fromTata(product)).toList();
+
+  return products;
+}
+
+Future<List<Product>> fetchProductsDisco(String text) async {
+  final variables = {
+    'productOriginVtex': true,
+    'simulationBehavior': 'default',
+    'hideUnavailableItems': true,
+    'advertisementOptions': {
+      'showSponsored': true,
+      'sponsoredCount': 2,
+      'repeatSponsoredProducts': false,
+      'advertisementPlacement': 'autocomplete',
+    },
+    'fullText': text,
+    'count': 5,
+    'shippingOptions': <void>[],
+    'variant': null,
+  };
+
+  final encodedVariables = base64.encode(utf8.encode(jsonEncode(variables)));
+
+  const sha256Hash =
+      '0ef2c56d9518b51f912c2305ac4b07851c265b645dcbece6843c568bb91d39ff';
+
+  final url = Uri.https(
+    Disco().domain.replaceAll('https://', ''),
+    '/_v/segment/graphql/v1',
+    {
+      'workspace': 'master',
+      'maxAge': 'medium',
+      'appsEtag': 'remove',
+      'domain': 'store',
+      'locale': 'es-UY',
+      'operationName': 'productSuggestions',
+      'variables': '{}',
+      'extensions': jsonEncode(
+        {
+          'persistedQuery': {
+            'version': 1,
+            'sha256Hash': sha256Hash,
+            'sender': 'vtex.store-resources@0.x',
+            'provider': 'vtex.search-graphql@0.x',
+          },
+          'variables': encodedVariables,
+        },
+      ),
+    },
+  );
+
+  final headers = {
+    'Content-Type': 'application/json',
+  };
+
+  final response = await http.get(url, headers: headers);
+
+  if (response.statusCode != 200) {
+    throw Exception('Error fetching products: ${response.body}');
+  }
+
+  final dataRaw = jsonDecode(response.body) as Map<String, dynamic>;
+
+  final data = dataRaw['data'] as Map<String, dynamic>;
+
+  final productSuggestions = data['productSuggestions'] as Map<String, dynamic>;
+
+  final productsRaw = productSuggestions['products'] as List<dynamic>;
+
+  final products = productsRaw.map((product) {
+    return ProductMapper().fromDisco(product as Map<String, dynamic>);
+  }).toList();
+
+  return products;
+}
+
+Future<List<Product>> fetchProductsTiendaInglesa(String text) async {
+  final url = Uri.parse(
+    '${TiendaInglesa().domain}/supermercado/busqueda?0,0,$text,0',
+  );
+
+  final response = await http.get(url);
+
+  if (response.statusCode != 200) {
+    throw Exception('Error fetching products: ${response.body}');
+  }
+
+  final soup = BeautifulSoup(response.body);
+
+  final result = soup.find('input', attrs: {'name': 'GXState'});
+
+  final content = result?.attributes['value'];
+
+  final contentJson = jsonDecode(content!) as Map<String, dynamic>;
+
+  final searchResponse = contentJson['vSEARCHRESPONSE'] as Map<String, dynamic>;
+
+  final productsRaw = searchResponse['Product'] as List<dynamic>;
+
+  final products =
+      productsRaw.asMap().entries.where((entry) => entry.key <= 8).map((entry) {
+    final index = entry.key;
+    final product = entry.value as Map<String, dynamic>;
+
+    final iProd = 'W0071000${index + 1}vPRODUCTUI';
+
+    product['extra_data'] = contentJson[iProd] as Map<String, dynamic>;
+
+    return ProductMapper().fromTiendaInglesa(product);
+  }).toList();
+
+  return products;
+}
+
+Future<List<Product>> fetchProductsDevoto(String text) async {
+  final variables = {
+    'productOriginVtex': false,
+    'simulationBehavior': 'default',
+    'hideUnavailableItems': true,
+    'fullText': text,
+    'count': 10,
+    'shippingOptions': <void>[],
+  };
+
+  final encodedVariables = base64.encode(utf8.encode(jsonEncode(variables)));
+
+  const sha256Hash =
+      '0ef2c56d9518b51f912c2305ac4b07851c265b645dcbece6843c568bb91d39ff';
+
+  final url = Uri.https(
+    Devoto().domain.replaceAll('https://', ''),
+    '/_v/segment/graphql/v1',
+    {
+      'workspace': 'master',
+      'maxAge': 'medium',
+      'appsEtag': 'remove',
+      'domain': 'store',
+      'locale': 'es-UY',
+      'operationName': 'productSuggestions',
+      'variables': '{}',
+      'extensions': jsonEncode(
+        {
+          'persistedQuery': {
+            'version': 1,
+            'sha256Hash': sha256Hash,
+            'sender': 'vtex.store-resources@0.x',
+            'provider': 'vtex.search-graphql@0.x',
+          },
+          'variables': encodedVariables,
+        },
+      ),
+    },
+  );
+
+  final headers = {
+    'Content-Type': 'application/json',
+  };
+
+  final response = await http.get(url, headers: headers);
+
+  if (response.statusCode != 200) {
+    throw Exception('Error fetching products: ${response.body}');
+  }
+
+  final dataRaw = jsonDecode(response.body) as Map<String, dynamic>;
+
+  final data = dataRaw['data'] as Map<String, dynamic>?;
+
+  if (data == null || !data.containsKey('productSuggestions')) {
+    throw Exception('Invalid response format');
+  }
+
+  final productSuggestions = data['productSuggestions'] as Map<String, dynamic>;
+  final productsRaw = productSuggestions['products'] as List<dynamic>? ?? [];
+
+  final products = productsRaw.map((product) {
+    return ProductMapper().fromDevoto(product as Map<String, dynamic>);
+  }).toList();
+
+  return products;
 }
